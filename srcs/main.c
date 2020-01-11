@@ -2,6 +2,9 @@
 #include "func_pro.h"
 #include "global.h"
 
+struct  passwd  *g_user;
+char    g_shell_dir[256] = "";
+
 int     cd_cmd(char *path)
 {
     char    buf[256];
@@ -89,38 +92,68 @@ int     run_program(t_program *program)
     return r;
 }
 
-int     main()
+int     main(int argc, char **argv)
 {
     int             size;
     int             ch;
-    int             r;
+    int             k;
+    int             ind[2] = {0, 0};
+    int             com;
+    //int             r;
     char            *buf;
-    struct  passwd  *user;
     t_program       *program;
 
     program = (t_program*)malloc(sizeof(t_program));
+    k = 1;
+    com = 0;
+    if (argc == 1)
+    {
+        memcpy(g_shell_dir, getenv("PWD"), strlen(getenv("PWD")));
+        size = strlen(getenv("PWD"));
+        while (argv[0][k])
+        {
+            g_shell_dir[size] = argv[0][k];
+            size++;
+            k++;
+        }
+        g_shell_dir[size] = '\0';
+    }
     program->fl_exit = 1;
     while (program->fl_exit)
     {
         size = 0;
-        user = getpwuid(getuid());
-        ft_putstr(user->pw_name);
+        g_user = getpwuid(getuid());
+        ft_putstr(g_user->pw_name);
         ft_putstr("$ ");
         buf = (char*)malloc(sizeof(char));
         while ((ch = getchar()) != '\n')
         {
+            if (ch == '\'')
+                ind[0] = (ind[0] + 1) % 2;
+            if (ch == '"')
+                ind[1] = (ind[1] + 1) % 2;
+            if (ind[0] == 0 && ind[1] == 0 && ch == '#' && buf[size-1] != '\\')
+            {
+                com = 1;
+                k = size;
+            }
             size++;
             buf = realloc(buf, sizeof(char) * (size + 1));
             buf[size-1] = ch;
         }
         buf[size] = '\0';
+        if (com)
+        {
+            buf = realloc(buf, sizeof(char) * (k + 1));
+            buf[k] = '\0';
+        }
         make_program(buf, program);
         check_program(buf, program);
-        r = run_program(program);
+        //r = run_program(program);
         free(buf);
         free_program(program);
     }
-    printf("return check: %d\n", r);
+    //printf("return check: %d\n", r);
     free(program);
     return 0;
 }
