@@ -35,7 +35,8 @@ void    check_program(char *str, t_program *program)
             printf("  output file: %s\n", program->job[i].out_file);
         else
             printf("  no output file\n");
-        printf("  output type: %d\n\n\n", program->job[i].out_type);
+        printf("  output type: %d\n", program->job[i].out_type);
+        //printf("  next pipe: %d\n\n\n", program->job[i].next_pipe);
         i++;
     }
 }
@@ -53,8 +54,6 @@ void    free_program(t_program *program)
             j = 0;
             if (program->job[i].name)
                 free(program->job[i].name);
-            if (program->job[i].in_file)
-                free(program->job[i].in_file);
             if (program->job[i].out_file)
                 free(program->job[i].out_file);
             if (program->job[i].arg)

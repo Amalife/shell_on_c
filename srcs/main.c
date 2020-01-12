@@ -4,90 +4,52 @@
 
 struct  passwd  *g_user;
 char    g_shell_dir[256] = "";
+int     g_k;
 
-int     cd_cmd(char *path)
+int     exter_cmd(struct s_job *job, int i)
 {
-    char    buf[256];
-    
-    if (chdir(path) == 0)
-    {
-        getcwd(buf, 256);
-        setenv("PWD", buf, 1);
+    char    **argv;
+    int     j;
+
+    j = 0;
+    argv = (char**)malloc(sizeof(char*) * 2);
+    argv[j] = job[i].name;
+    j++;
+    if (job[i].num_of_arg)
+    {    
+        while (job[i].arg[j-1])
+        {
+            argv = realloc(argv, sizeof(char*) * (j + 2));
+            argv[j] = job[i].arg[j-1];
+            j++;
+        }
     }
-    else
-    {
-        perror(buf);
-        return -1;
-    }
+    argv[j] = NULL;
+    execvp(job[i].name, argv);
+    free(argv);
     return 0;
 }
 
-int     exter_cmd(t_program *program)
+int     run_program(t_program *program, int i)
 {
-    int     i;
-    int     j;
-    pid_t   pid;
-    char    **argv;
-
-    i = 0;
-    j = 0;
-    argv = (char**)malloc(sizeof(char*) * (program->job[i].num_of_arg + 2));
-    argv[j] = program->job[i].name;
-    j++;
-    while (j != program->job[i].num_of_arg + 1)
-    {
-        argv[j] = program->job[i].arg[j-1];
-        j++;
-    }
-    argv[j] = NULL;
-    pid = fork();
-    if (pid == 0)
-    {
-        //ft_putstr("It is a child\n");
-        if (execvp(program->job[i].name, argv) == -1)
-        {
-            free(argv);
-            perror(program->job[i].name);
-            return -1;
-        }
-        free(argv);
-        return 0;
-    }
-    else
-    {
-        wait(0);
-        free(argv);
-        //ft_putstr("It is a parent\n");
-        return 0;
-    }
-}
-
-int     run_program(t_program *program)
-{
-    int i;
     int r;
 
-    i = 0;
     r = 0;
-    while (i != program->num_of_jobs)
+    switch (check_iternal(program->job[i].name))
     {
-        switch (check_iternal(program->job[i].name))
-        {
-            case I_PWD:
-                ft_putstr(getenv("PWD"));
-                ft_putchar('\n');
-                break;
-            case I_EXIT:
-                program->fl_exit = 0;
-                break;
-            case I_CD:
-                r = cd_cmd(program->job[i].arg[0]);
-                break;
-            default:
-                //ft_putstr("not an iternal command\n");
-                r = exter_cmd(program);
-        }
-        i++;
+        case I_PWD:
+            ft_putstr(getenv("PWD"));
+            ft_putchar('\n');
+            break;
+        case I_EXIT:
+            program->fl_exit = 0;
+            break;
+        case I_CD:
+            r = cd_cmd(program->job[i].arg[0]);
+            break;
+        default:
+            //ft_putstr("not an iternal command\n");
+            r = exter_cmd(program->job, i);
     }
     return r;
 }
@@ -99,7 +61,7 @@ int     main(int argc, char **argv)
     int             k;
     int             ind[2] = {0, 0};
     int             com;
-    //int             r;
+    int             r;
     char            *buf;
     t_program       *program;
 
@@ -121,39 +83,49 @@ int     main(int argc, char **argv)
     program->fl_exit = 1;
     while (program->fl_exit)
     {
+        g_k = 0;
         size = 0;
         g_user = getpwuid(getuid());
         ft_putstr(g_user->pw_name);
         ft_putstr("$ ");
         buf = (char*)malloc(sizeof(char));
-        while ((ch = getchar()) != '\n')
+        do
         {
-            if (ch == '\'')
-                ind[0] = (ind[0] + 1) % 2;
-            if (ch == '"')
-                ind[1] = (ind[1] + 1) % 2;
-            if (ind[0] == 0 && ind[1] == 0 && ch == '#' && buf[size-1] != '\\')
+            while ((ch = getchar()) != '\n')
             {
-                com = 1;
-                k = size;
+                if (ch == '\'')
+                    ind[0] = (ind[0] + 1) % 2;
+                if (ch == '"')
+                    ind[1] = (ind[1] + 1) % 2;
+                if (ind[0] == 0 && ind[1] == 0 && ch == '#' && 
+                                                            buf[size-1] != '\\')
+                {
+                    com = 1;
+                    k = size;
+                }
+                size++;
+                buf = realloc(buf, sizeof(char) * (size + 1));
+                buf[size-1] = ch;
             }
-            size++;
-            buf = realloc(buf, sizeof(char) * (size + 1));
-            buf[size-1] = ch;
-        }
-        buf[size] = '\0';
-        if (com)
+            buf[size] = '\0';
+        } while (buf[size-1] == '\\');
+        if (com && buf[k-1] != '\\' && buf[k-1] == ' ')
         {
             buf = realloc(buf, sizeof(char) * (k + 1));
             buf[k] = '\0';
         }
-        make_program(buf, program);
-        check_program(buf, program);
-        //r = run_program(program);
+        while (buf[g_k] && check_last(buf, g_k))
+        {
+            make_program(buf, program);
+            check_program(buf, program);
+            r = create_proc(program);
+            free_program(program);
+            if (buf[g_k])
+                g_k++;
+        }
         free(buf);
-        free_program(program);
     }
-    //printf("return check: %d\n", r);
+    printf("return check: %d\n", r);
     free(program);
     return 0;
 }
