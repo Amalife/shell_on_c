@@ -9,7 +9,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <errno.h>
+#include <fcntl.h>
 
-#define NUM_OF_CMD 3
+#define NUM_OF_CMD 4
 
 #endif

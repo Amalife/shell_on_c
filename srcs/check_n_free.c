@@ -2,6 +2,8 @@
 #include "func_pro.h"
 #include "global.h"
 
+t_history   *g_history;
+
 void    check_program(char *str, t_program *program)
 {
     int i;
@@ -48,12 +50,14 @@ void    free_program(t_program *program)
 
     i = 0;
     if (program)
-    {
+    {    
         while (i != program->num_of_jobs)
         {
             j = 0;
             if (program->job[i].name)
                 free(program->job[i].name);
+            if (program->job[i].in_file)
+                free(program->job[i].in_file);
             if (program->job[i].out_file)
                 free(program->job[i].out_file);
             if (program->job[i].arg)
@@ -69,4 +73,21 @@ void    free_program(t_program *program)
         }
         free(program->job);
     }
+}
+
+void    free_history()
+{
+    int top_save;
+    int count;
+
+    top_save = 0;
+    count = g_history->bot - g_history->top;
+    while (count)
+    {
+        free(g_history->commands[top_save]);
+        top_save++;
+        count--;
+    }
+    free(g_history->commands);
+    free(g_history);
 }

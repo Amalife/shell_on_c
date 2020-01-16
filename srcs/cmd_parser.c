@@ -2,7 +2,7 @@
 #include "func_pro.h"
 #include "global.h"
 
-char    *g_cmd_base[NUM_OF_CMD] = {"pwd", "exit", "cd"};
+char    *g_cmd_base[NUM_OF_CMD] = {"pwd", "exit", "cd", "history"};
 struct  passwd  *g_user;
 char    g_shell_dir[256];
 int     g_k;
@@ -17,7 +17,7 @@ int     check_last(char *str, int t)
         return 1;
 }
 
-char    *app_var(char *old_buf, char *str, int i)
+char    *app_var(t_program *program, char *old_buf, char *str, int i, int j)
 {
     char    *ch_var;
     int     size;
@@ -70,15 +70,67 @@ char    *app_var(char *old_buf, char *str, int i)
         }
         old_buf[i] = '\0';
     }
+    else if (str[g_k] == '#')
+    {
+        nbr = ft_itoa(program->job[j].num_of_arg);
+        while (nbr[t])
+        {
+            old_buf = realloc(old_buf, sizeof(char) * (i + 3));
+            old_buf[i] = nbr[t];
+            i++;
+            t++;
+        }
+        old_buf[i] = '\0';
+        free(nbr);
+    }
+    else if (str[g_k] && str[g_k] >= '0' && str[g_k] <= '9')
+    {
+        while (str[g_k] && str[g_k] >= '0' && str[g_k] <= '9')
+        {
+            size++;
+            ch_var = realloc(ch_var, sizeof(char) * (size + 1));
+            ch_var[size-1] = str[g_k];
+            g_k++;
+        }
+        ch_var[size] = '\0';
+        size = ft_atoi(ch_var);
+        if (size <= program->job[j].num_of_arg && size >= 0)
+        {
+            if (size == 0)
+            {
+                while (program->job[j].name[t])
+                {
+                    old_buf = realloc(old_buf, sizeof(char) * (i + 3));
+                    old_buf[i] = program->job[j].name[t];
+                    i++;
+                    t++;
+                }
+                old_buf[i] = '\0';
+                printf("\n\n%s\n\n", old_buf);
+            }
+            else
+            {
+                while (program->job[j].arg[size-1][t])
+                {
+                    old_buf = realloc(old_buf, sizeof(char) * (i + 3));
+                    old_buf[i] = program->job[j].arg[size-1][t];
+                    i++;
+                    t++;
+                }
+                old_buf[i] = '\0';
+            }
+        }
+    }
     free(ch_var);
         return old_buf;
 }
 
-char    *quote_str(char *str, char sym)
+char    *quote_str(t_program *program, char *str, char sym, int j)
 {
     char    *buf;
     int     i;
     int     ind_d;
+    int     t;
 
     ind_d = 0;
     i = 0;
@@ -92,9 +144,13 @@ char    *quote_str(char *str, char sym)
     {
         if (ind_d == 1 && str[g_k] == '$')
         {
-            buf = app_var(buf, str, i);
-            while (str[g_k] && str[g_k] != '}')
-                g_k++;
+            t = g_k;
+            buf = app_var(program, buf, str, i, j);
+            if (str[t+1] == '{')
+            {
+                while (str[g_k] && str[g_k] != '}')
+                    g_k++;
+            }
             if (str[g_k])
                 g_k++;
             while (buf[i])
@@ -114,10 +170,11 @@ char    *quote_str(char *str, char sym)
     return buf;
 }
 
-char    *sim_str(char *str)
+char    *sim_str(t_program *program, char *str, int j)
 {
     char    *buf;
     int     i;
+    int     t;
 
     i = 0;
     buf = (char*)malloc(sizeof(char) * 2);
@@ -126,14 +183,21 @@ char    *sim_str(char *str)
     {
         if (str[g_k] == '$')
         {
-            buf = app_var(buf, str, i);
-            while (str[g_k] && str[g_k] != '}')
-                g_k++;
+            t = g_k;
+            buf = app_var(program, buf, str, i, j);
+            if (str[t+1] == '{')
+            {
+                while (str[g_k] && str[g_k] != '}')
+                    g_k++;
+            }
             if (str[g_k])
                 g_k++;
             while (buf[i])
                 i++;
         }
+        else if (str[g_k] == '<' || str[g_k] == '>' || 
+                                    (str[g_k] == '>' && str[g_k+1] == '>'))
+            finout(program, program->job, str, j);
         else
         {
             if (str[g_k] == '\\')
@@ -148,20 +212,20 @@ char    *sim_str(char *str)
     return buf;
 }
 
-char    *make_str(char *str)
+char    *make_str(t_program *program, char *str, int i)
 {
     char    *buf;
 
     if (str[g_k] == '"')
-        buf = quote_str(str, '"');
+        buf = quote_str(program, str, '"', i);
     else if (str[g_k] == '\'')
-        buf = quote_str(str, '\'');
+        buf = quote_str(program, str, '\'', i);
     else if (str[g_k] != ' ' && str[g_k] != '\t')
-        buf = sim_str(str);
+        buf = sim_str(program, str, i);
     return buf;
 }
 
-void    finout(struct s_job *job, char *str, int i)
+void    finout(t_program *program, struct s_job *job, char *str, int i)
 {
     //int t;
 
@@ -171,7 +235,7 @@ void    finout(struct s_job *job, char *str, int i)
         g_k++;
         while (str[g_k] && (str[g_k] == ' ' || str[g_k] == '\t'))
             g_k++;
-        job[i].in_file = make_str(str);
+        job[i].in_file = make_str(program, str, i);
     }
     else if (str[g_k] == '>' && str[g_k+1] == '>')
     {
@@ -179,7 +243,7 @@ void    finout(struct s_job *job, char *str, int i)
         g_k += 2;
         while (str[g_k] && (str[g_k] == ' ' || str[g_k] == '\t'))
             g_k++;
-        job[i].out_file = make_str(str);
+        job[i].out_file = make_str(program, str, i);
     }
     else if (str[g_k] == '>')
     {
@@ -187,7 +251,7 @@ void    finout(struct s_job *job, char *str, int i)
         g_k++;
         while (str[g_k] && (str[g_k] == ' ' || str[g_k] == '\t'))
             g_k++;
-        job[i].out_file = make_str(str);
+        job[i].out_file = make_str(program, str, i);
     }
 }
 
@@ -215,7 +279,10 @@ void    make_program(char *str, t_program *program)
         }
         if (str[g_k] == ';')
             break;
-        program->job[i].name = make_str(str);
+        else if (str[g_k] == '<' || str[g_k] == '>' || 
+                                    (str[g_k] == '>' && str[g_k+1] == '>'))
+            finout(program, program->job, str, i);
+        program->job[i].name = make_str(program, str, i);
         program->job[i].arg = malloc(sizeof(char*) * (count + 1));
         while (str[g_k] && check_last(str, g_k) && str[g_k] != ';')
         {
@@ -230,13 +297,13 @@ void    make_program(char *str, t_program *program)
                 break;
             else if (str[g_k] == '<' || str[g_k] == '>' || 
                                         (str[g_k] == '>' && str[g_k+1] == '>'))
-                finout(program->job, str, i);
+                finout(program, program->job, str, i);
             if (check_last(str, g_k) && str[g_k] != ' ' && str[g_k] != '\t'
                                                             && str[g_k] != ';')
             {
                 program->job[i].arg = realloc(program->job[i].arg, 
                                                 sizeof(char*) * (count + 2));
-                program->job[i].arg[count] = make_str(str);
+                program->job[i].arg[count] = make_str(program, str, i);
                 count++;
                 program->job[i].num_of_arg++;
             }

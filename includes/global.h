@@ -5,7 +5,8 @@ enum    e_inter_cmd
 {
     I_PWD,
     I_EXIT,
-    I_CD
+    I_CD,
+    I_HISTORY
 };
 
 enum    e_out_type
@@ -32,5 +33,13 @@ typedef struct  s_program
     int     num_of_jobs;
     int     fl_exit;
 }               t_program;
+
+typedef struct  s_history
+{
+    int     top;
+    int     bot;
+    int     num;
+    char    **commands;
+}               t_history;
 
 #endif

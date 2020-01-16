@@ -8,9 +8,13 @@ int     create_proc(t_program *program)
     int     pipefd[2];
     int     input;
     int     status;
+    int     in;
+    //int     fl_eof;
+    int     out;
     pid_t   pid;
 
     j = 0;
+    //fl_eof = 0;
     if (program->num_of_jobs == 1)
     {
         if (check_iternal(program->job[j].name) != -1)
@@ -20,6 +24,32 @@ int     create_proc(t_program *program)
             pid = fork();
             if (pid == 0)
             {
+                if (program->job[j].in_file)
+                {
+                    if ((in = open(program->job[j].in_file, O_RDONLY)) != -1)
+                    {
+                        dup2(in, 0);
+                        close(in);
+                    }
+                    else
+                    {
+                        perror(program->job[j].in_file);
+                        exit(0);
+                    }
+                }
+                if (program->job[j].out_file)
+                {
+                    if (program->job[j].out_type == T_REWRITE)
+                        out = open(program->job[j].out_file, 
+                            O_WRONLY | O_TRUNC | O_CREAT, 
+                                        S_IRUSR | S_IRGRP | S_IWUSR | S_IWGRP);
+                    else
+                        out = open(program->job[j].out_file,
+                            O_WRONLY | O_APPEND | O_CREAT,
+                                        S_IRUSR | S_IRGRP | S_IWUSR | S_IWGRP);
+                    dup2(out, 1);
+                    close(out);
+                }
                 run_program(program, j);
                 exit(0);
             }
@@ -38,7 +68,36 @@ int     create_proc(t_program *program)
             {
                 if (j == 0)
                 {
-                    dup2(pipefd[1], 1);
+                    if (program->job[j].in_file)
+                    {
+                        if ((in = open(program->job[j].in_file, O_RDONLY)) != -1)
+                        {
+                            dup2(in, 0);
+                            close(in);
+                        }
+                        else
+                        {
+                            perror(program->job[j].in_file);
+                            close(pipefd[1]);
+                            close(pipefd[0]);
+                            exit(0);
+                        }
+                    }
+                    if (program->job[j].out_file)
+                    {
+                        if (program->job[j].out_type == T_REWRITE)
+                            out = open(program->job[j].out_file,
+                                O_WRONLY | O_TRUNC | O_CREAT, 
+                                        S_IRUSR | S_IRGRP | S_IWUSR | S_IWGRP);
+                        else
+                            out = open(program->job[j].out_file,
+                                O_WRONLY | O_APPEND | O_CREAT,
+                                        S_IRUSR | S_IRGRP | S_IWUSR | S_IWGRP);
+                        dup2(out, 1);
+                        close(out);
+                    }
+                    else
+                        dup2(pipefd[1], 1);
                     close(pipefd[1]);
                     close(pipefd[0]);
                     run_program(program, j);
@@ -48,18 +107,81 @@ int     create_proc(t_program *program)
                 {
                     if (j != program->num_of_jobs - 1)
                     {
-                        dup2(pipefd[1], 1);
-                        dup2(input, 0);
+                        if (program->job[j].in_file)
+                        {
+                            if ((in = open(program->job[j].in_file, O_RDONLY)) != -1)
+                            {
+                                dup2(in, 0);
+                                close(in);
+                            }
+                            else
+                            {
+                                perror(program->job[j].in_file);
+                                close(pipefd[1]);
+                                close(pipefd[0]);
+                                exit(0);
+                            }
+                        }
+                        else
+                        {
+                            dup2(input, 0);
+                            close(input);
+                        }
+                        if (program->job[j].out_file)
+                        {
+                            if (program->job[j].out_type == T_REWRITE)
+                                out = open(program->job[j].out_file,
+                                    O_WRONLY | O_TRUNC | O_CREAT, 
+                                        S_IRUSR | S_IRGRP | S_IWUSR | S_IWGRP);
+                            else
+                                out = open(program->job[j].out_file,
+                                    O_WRONLY | O_APPEND | O_CREAT,
+                                        S_IRUSR | S_IRGRP | S_IWUSR | S_IWGRP);
+                            dup2(out, 1);
+                            close(out);
+                        }
+                        else
+                            dup2(pipefd[1], 1);
                         close(pipefd[1]);
-                        close(input);
                         close(pipefd[0]);
                         run_program(program, j);
                         exit(0);
                     }
                     else
                     {
-                        dup2(input, 0);
-                        close(input);
+                        if (program->job[j].in_file)
+                        {
+                            if ((in = open(program->job[j].in_file, O_RDONLY)) != -1)
+                            {
+                                dup2(in, 0);
+                                close(in);
+                            }
+                            else
+                            {
+                                perror(program->job[j].in_file);
+                                close(pipefd[1]);
+                                close(pipefd[0]);
+                                exit(0);
+                            }
+                        }
+                        else
+                        {
+                            dup2(input, 0);
+                            close(input);
+                        }
+                        if (program->job[j].out_file)
+                        {
+                            if (program->job[j].out_type == T_REWRITE)
+                                out = open(program->job[j].out_file,
+                                    O_WRONLY | O_TRUNC | O_CREAT, 
+                                        S_IRUSR | S_IRGRP | S_IWUSR | S_IWGRP);
+                            else
+                                out = open(program->job[j].out_file,
+                                    O_WRONLY | O_APPEND | O_CREAT,
+                                        S_IRUSR | S_IRGRP | S_IWUSR | S_IWGRP);
+                            dup2(out, 1);
+                            close(out);
+                        }
                         run_program(program, j);
                         exit(0);
                     }
