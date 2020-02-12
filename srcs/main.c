@@ -4,6 +4,8 @@
 
 struct      passwd  *g_user;
 char        g_shell_dir[256] = "";
+char        **main_argv;
+int         main_argc;
 int         g_k;
 t_history   *g_history;
 
@@ -80,6 +82,8 @@ int     main(int argc, char **argv)
     g_history->commands = (char**)malloc(sizeof(char*));
     k = 1;
     com = 0;
+    main_argc = argc;
+    main_argv = argv;
     if (argc == 1)
     {
         memcpy(g_shell_dir, getenv("PWD"), strlen(getenv("PWD")));
@@ -142,7 +146,7 @@ int     main(int argc, char **argv)
             while (buf[g_k] && check_last(buf, g_k))
             {
                 make_program(buf, program);
-                check_program(buf, program);
+                //check_program(buf, program);
                 create_proc(program);
                 free_program(program);
                 if (buf[g_k])

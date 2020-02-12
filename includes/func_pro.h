@@ -14,10 +14,10 @@ void    free_program(t_program *program);
 void    free_history();
 
 int     check_last(char *str, int t);
-char    *quote_str(t_program *program, char *str, char sym, int j);
+char    *quote_str(char *str, char sym);
 char    *sim_str(t_program *program, char *str, int j);
 char    *make_str(t_program *program, char *str, int i);
-char    *app_var(t_program *program, char *old_buf, char *str, int i, int j);
+char    *app_var(char *old_buf, char *str, int i);
 void    finout(t_program *program, struct s_job *job, char *str, int i);
 void    make_program(char *str, t_program *program);
 

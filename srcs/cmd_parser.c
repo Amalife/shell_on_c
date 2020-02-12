@@ -5,6 +5,8 @@
 char    *g_cmd_base[NUM_OF_CMD] = {"pwd", "exit", "cd", "history"};
 struct  passwd  *g_user;
 char    g_shell_dir[256];
+char    **main_argv;
+int     main_argc;
 int     g_k;
 
 int     check_last(char *str, int t)
@@ -17,7 +19,7 @@ int     check_last(char *str, int t)
         return 1;
 }
 
-char    *app_var(t_program *program, char *old_buf, char *str, int i, int j)
+char    *app_var(char *old_buf, char *str, int i)
 {
     char    *ch_var;
     int     size;
@@ -68,11 +70,12 @@ char    *app_var(t_program *program, char *old_buf, char *str, int i, int j)
             i++;
             t++;
         }
-        old_buf[i] = '\0';
+        if (str[g_k])
+            g_k++;
     }
     else if (str[g_k] == '#')
     {
-        nbr = ft_itoa(program->job[j].num_of_arg);
+        nbr = ft_itoa(main_argc);
         while (nbr[t])
         {
             old_buf = realloc(old_buf, sizeof(char) * (i + 3));
@@ -80,8 +83,9 @@ char    *app_var(t_program *program, char *old_buf, char *str, int i, int j)
             i++;
             t++;
         }
-        old_buf[i] = '\0';
         free(nbr);
+        if (str[g_k])
+            g_k++;
     }
     else if (str[g_k] && str[g_k] >= '0' && str[g_k] <= '9')
     {
@@ -94,65 +98,39 @@ char    *app_var(t_program *program, char *old_buf, char *str, int i, int j)
         }
         ch_var[size] = '\0';
         size = ft_atoi(ch_var);
-        if (size <= program->job[j].num_of_arg && size >= 0)
+        if (size < main_argc && size >= 0)
         {
-            if (size == 0)
+            while (main_argv[size][t])
             {
-                while (program->job[j].name[t])
-                {
-                    old_buf = realloc(old_buf, sizeof(char) * (i + 3));
-                    old_buf[i] = program->job[j].name[t];
-                    i++;
-                    t++;
-                }
-                old_buf[i] = '\0';
-                printf("\n\n%s\n\n", old_buf);
-            }
-            else
-            {
-                while (program->job[j].arg[size-1][t])
-                {
-                    old_buf = realloc(old_buf, sizeof(char) * (i + 3));
-                    old_buf[i] = program->job[j].arg[size-1][t];
-                    i++;
-                    t++;
-                }
-                old_buf[i] = '\0';
+                old_buf = realloc(old_buf, sizeof(char) * (i + 3));
+                old_buf[i] = main_argv[size][t];
+                t++;
+                i++;
             }
         }
     }
+    old_buf[i] = '\0';
     free(ch_var);
-        return old_buf;
+    return old_buf;
 }
 
-char    *quote_str(t_program *program, char *str, char sym, int j)
+char    *quote_str(char *str, char sym)
 {
     char    *buf;
     int     i;
     int     ind_d;
-    int     t;
 
     ind_d = 0;
     i = 0;
     if (sym == '"')
         ind_d = 1;
     buf = (char*)malloc(sizeof(char) * 2);
-    buf[i] = str[g_k];
-    i++;
     g_k++;
     while (str[g_k] != sym && str[g_k])
     {
         if (ind_d == 1 && str[g_k] == '$')
         {
-            t = g_k;
-            buf = app_var(program, buf, str, i, j);
-            if (str[t+1] == '{')
-            {
-                while (str[g_k] && str[g_k] != '}')
-                    g_k++;
-            }
-            if (str[g_k])
-                g_k++;
+            buf = app_var(buf, str, i);
             while (buf[i])
                 i++;
         }
@@ -164,8 +142,6 @@ char    *quote_str(t_program *program, char *str, char sym, int j)
             g_k++;
         }
     }
-    buf[i] = str[g_k];
-    i++;
     buf[i] = '\0';
     return buf;
 }
@@ -184,7 +160,7 @@ char    *sim_str(t_program *program, char *str, int j)
         if (str[g_k] == '$')
         {
             t = g_k;
-            buf = app_var(program, buf, str, i, j);
+            buf = app_var(buf, str, i);
             if (str[t+1] == '{')
             {
                 while (str[g_k] && str[g_k] != '}')
@@ -217,9 +193,9 @@ char    *make_str(t_program *program, char *str, int i)
     char    *buf;
 
     if (str[g_k] == '"')
-        buf = quote_str(program, str, '"', i);
+        buf = quote_str(str, '"');
     else if (str[g_k] == '\'')
-        buf = quote_str(program, str, '\'', i);
+        buf = quote_str(str, '\'');
     else if (str[g_k] != ' ' && str[g_k] != '\t')
         buf = sim_str(program, str, i);
     return buf;
